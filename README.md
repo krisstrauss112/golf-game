@@ -19,6 +19,7 @@
 - **Kuhle um jedes Loch:** Rollt der Ball in die Mulde, zieht sie ihn ins Loch
 - **Zufälliges Wetter je Loch**, passend zum Thema: Sonnig, Bewölkt, Regen (die Bahn ist nass, der Ball rollt kürzer), Schnee (glatt, der Ball rollt weiter), Nebel, Sturm mit Blitzen und Sandsturm
 - **Wind** mit Richtung und Stärke, der den Ball ablenkt. Die Fahne weht mit.
+- **Die Hand als Schläger:** Eine 3D-Hand holt beim Aufladen aus und stößt den Ball mit den Fingerspitzen an
 - **Schlaghärte:** Leertaste (oder SCHLAG-Button) drücken, der Balken pendelt, nochmal drücken schlägt
 - **Garderobe:** Ballfarbe (Palette oder frei wählbar), Muster, 11 Hüte und 7 Spuren (Feuer, Eis, Blitz, Sterne, Regenbogen, Regen, Klassisch)
 - **Rangliste** pro Strecke. Als claude.ai-Artifact ist sie für alle gemeinsam, sonst wird sie lokal im Browser gespeichert.
