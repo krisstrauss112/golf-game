@@ -292,7 +292,7 @@
 // =====================================================================
 //  Grundkonstanten & Helfer
 // =====================================================================
-const R=0.15, G=9.81, CUP_R=0.30, VMAX=9.5, W=2.4;
+const R=0.15, G=9.81, CUP_R=0.30, DIP_R=0.85, VMAX=9.5, W=2.4;
 const WALL_H=0.4, WALL_T=0.2, FLOOR_T=0.4, STEP=1/240;
 const WIND_GROUND=0.035, WIND_AIR=0.09;
 const ONE=new THREE.Vector3(1,1,1), _zAxis=new THREE.Vector3(0,0,1), _yAxis=new THREE.Vector3(0,1,0);
@@ -382,6 +382,11 @@ const TEX={
   soft:()=>mkTex('soft',64,(x,s)=>{const g=x.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.35,'rgba(255,255,255,.6)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,s,s);}),
   star:()=>mkTex('star',64,(x,s)=>{x.fillStyle='#fff';x.translate(s/2,s/2);x.beginPath();for(let i=0;i<10;i++){const rr=i%2?s*.18:s*.48,a=i/10*Math.PI*2-Math.PI/2;x.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);}x.fill();
     const g=x.createRadialGradient(0,0,0,0,0,s/2);g.addColorStop(0,'rgba(255,255,255,.6)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(-s/2,-s/2,s,s);}),
+  jump:()=>mkTex('jump',128,(x,s)=>{x.fillStyle='#1f8a4a';x.fillRect(0,0,s,s);x.strokeStyle='#bfffd6';x.lineWidth=10;x.lineCap='round';
+    for(let k=0;k<2;k++){x.beginPath();x.moveTo(s*.22,s*(.38+k*.3)-18);x.lineTo(s*.5,s*(.38+k*.3)+8);x.lineTo(s*.78,s*(.38+k*.3)-18);x.stroke();}
+    x.strokeStyle='#0d4a26';x.lineWidth=6;x.strokeRect(3,3,s-6,s-6);}),
+  dip:()=>mkTex('dip',256,(x,s)=>{const g=x.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);g.addColorStop(0,'rgba(0,0,0,.42)');g.addColorStop(.35,'rgba(0,0,0,.3)');
+    g.addColorStop(.75,'rgba(0,0,0,.1)');g.addColorStop(.93,'rgba(0,0,0,0)');g.addColorStop(.96,'rgba(255,255,255,.22)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,s,s);}),
   tuft:()=>mkTex('tuft',128,(x,s,r)=>{x.clearRect(0,0,s,s);for(let i=0;i<26;i++){x.strokeStyle=r()<.5?'#7ab84a':'#5a9a35';x.lineWidth=2+r()*2;const bx=s*.2+r()*s*.6;x.beginPath();x.moveTo(bx,s);x.quadraticCurveTo(bx+(r()-.5)*20,s*.5,bx+(r()-.5)*40,s*(.05+r()*.3));x.stroke();}}),
 };
 function texFrom(spec){const [k,...a]=spec;return TEX[k](...a);}
@@ -456,115 +461,112 @@ const THEMES={
 //  Strecken & Löcher
 // =====================================================================
 const COURSES=[
-  {id:'c0',name:'Sonnenwiese',theme:'garten',diff:1,desc:'Gemütlicher Garten mit Rampen, Hügeln und einer Windmühle. Ideal zum Einputten.',holes:[
-    {name:'Aufwärmen',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,10.8);B.pad(0,12,{open:'s'});B.tee(0,0);B.cup(0,12.3);}},
-    {name:'Die Kurve',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,7.8);B.pad(0,9,{open:'se'});B.lane(1.2,9,6.8,9);B.pad(8,9,{open:'w'});B.cyl(.6,9.6,.28);B.tee(0,0);B.cup(8.2,9);}},
-    {name:'Rampe',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4.5);B.lane(0,4.5,0,8,{y1:1});B.pad(0,9.2,{y:1,open:'s'});B.tee(0,0);B.cup(0,9.5,1);}},
-    {name:'Windmühle',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,14.8);B.pad(0,16,{open:'s'});B.windmill(0,7.75,0);B.tee(0,0);B.cup(0,16.2);}},
-    {name:'Hügelland',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4);B.lane(0,4,0,6,{y1:.5});B.lane(0,6,0,8,{y0:.5,y1:0});B.lane(0,8,0,10.8);B.pad(0,12,{open:'s'});
-      B.cyl(-.55,10.9,.18);B.cyl(.55,10.9,.18);B.tee(0,0);B.cup(0,12.4);}},
-    {name:'Zickzack',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,5.8);B.pad(0,7,{open:'se'});B.lane(1.2,7,4.8,7);B.pad(6,7,{open:'wn'});B.lane(6,8.2,6,13.8);B.pad(6,15,{open:'s'});
-      B.cyl(-.3,3.8,.3);B.cyl(3,7.3,.3);B.cyl(6.4,11,.3);B.tee(0,0);B.cup(6,15.2);}},
+  {id:'c0',name:'Sonnenwiese',theme:'garten',diff:1,desc:'Gemütlicher Garten: erster Looping, Hüpfwiese mit Sprungfeldern, Mühlenhügel und eine Gartenkanone.',holes:[
+    {name:'Gartenpfad',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,5);B.pad(0,6.2,{open:'se'});B.lane(1.2,6.2,4.8,6.2);B.pad(6,6.2,{open:'wn'});B.lane(6,7.4,6,10.8);B.pad(6,12,{open:'s'});
+      B.cyl(-.3,3.4,.3);B.cyl(3,5.8,.25);B.cyl(6.3,9.2,.25);B.tee(0,0);B.cup(6,12.2);}},
+    {name:'Erster Looping',par:2,build(B){B.pad(0,0,{doors:{n:1.2}});B.lane(0,1.2,0,4.4,{w:1.2});B.boost(0,2.6,0,0,{w:1});B.loop(0,4.4,0,{shift:1.8});B.lane(1.8,4.4,1.8,8.8,{w:1.2});B.pad(1.8,10,{doors:{s:1.2}});B.tee(0,0);B.cup(1.8,10.3);}},
+    {name:'Hüpfwiese',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3);B.jumpPad(0,2.3,0);B.pad(0,6.7,{open:'sn'});B.jumpPad(0,7.3,0);B.pad(0,12,{w:3,l:3.2,open:'s'});B.tee(0,0);B.cup(0,12.5);}},
+    {name:'Mühlenhügel',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4);B.lane(0,4,0,6,{y1:.5});B.pad(0,7.2,{y:.5,open:'sn'});B.lane(0,8.4,0,13.6,{y0:.5});B.windmill(0,11,.5);B.pad(0,14.8,{y:.5,open:'s'});B.tee(0,0);B.cup(0,15,.5);}},
+    {name:'Gartenkanone',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4.8);B.pad(0,6,{open:'s'});B.cannon(0,6.2,0);B.pad(0,15,{w:4,l:4});B.cyl(-1,14,.25);B.tee(0,0);B.cup(.4,15.6);}},
+    {name:'Gartenschlange',par:4,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,5.8);B.tunnel(0,1.6,0,5.4);B.pad(0,7,{open:'sw'});B.lane(-1.2,7,-4.8,7);B.slider(-3,7,{w:1.2,amp:.6,speed:1.4,phase:0,axis:'z'});
+      B.pad(-6,7,{open:'en'});B.lane(-6,8.2,-6,11.8);B.gate(-6,10,0,{speed:1.3,phase:1});B.pad(-6,13,{open:'se'});B.lane(-4.8,13,-1.2,13);B.pad(0,13,{open:'w'});B.tee(0,0);B.cup(.2,13);}},
   ]},
-  {id:'c1',name:'Piratenbucht',theme:'bucht',diff:2,desc:'Holzplanken über dem Wasser, Sprungschanzen und Schiebeplanken. Wer runterfällt, geht baden.',holes:[
-    {name:'Die Planke',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,8.8,{w:1.1,walls:'none'});B.pad(0,10,{open:'s'});B.tee(0,0);B.cup(0,10.2);}},
-    {name:'Sprungschanze',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,5);B.lane(0,5,0,7,{y1:.6});B.pad(0,11,{w:4,l:4,open:'s'});B.tee(0,0);B.cup(0,12);}},
-    {name:'Schiebeplanken',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,12.8);B.pad(0,14,{open:'s'});
-      B.slider(0,5,{w:1.2,amp:.6,speed:1.6,phase:0});B.slider(0,8.5,{w:1.2,amp:.6,speed:1.6,phase:Math.PI});B.tee(0,0);B.cup(0,14.2);}},
-    {name:'Drehbalken',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4);B.pad(0,7,{w:6,l:6,doors:{s:W}});B.sweeper(0,7.6,0,{r0:.55,r1:2.3,speed:1.1,arms:2});B.tee(0,0);B.cup(0,7.6);}},
-    {name:'Brücke',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4.8);B.pad(0,6,{open:'s',doors:{e:1.0}});B.lane(1.2,6,7.8,6,{w:1.0,walls:'none'});
-      B.pad(9,6,{open:'n',doors:{w:1.0}});B.lane(9,7.2,9,10.8);B.pad(9,12,{open:'s'});B.tee(0,0);B.cup(9,12.2);}},
-    {name:'Kapitänsdeck',par:3,build(B){B.pad(0,0,{y:1.5,open:'n'});B.lane(0,1.2,0,5,{y0:1.5,y1:0});B.lane(0,5,0,7);B.boost(0,6,0,0);
-      B.lane(0,7,0,10,{y1:.9});B.pad(0,11.2,{y:.9,open:'s'});B.tee(0,0,1.5);B.cup(0,11.4,.9);}},
+  {id:'c1',name:'Piratenbucht',theme:'bucht',diff:2,desc:'Planken über dem Wasser, eine Piratenkanone, ein Looping im Wrack und ein Sprung zur Schatzinsel.',holes:[
+    {name:'Plankensteg',par:3,build(B){B.pad(0,0,{doors:{n:1.1}});B.lane(0,1.2,0,5,{w:1.1,walls:'none'});B.pad(0,6,{w:2,l:2,doors:{s:1.1,w:1.1}});B.lane(-1,6,-5,6,{w:1.1,walls:'none'});
+      B.pad(-6,6,{w:2,l:2,doors:{e:1.1,n:1.1}});B.lane(-6,7,-6,11,{w:1.1,walls:'none'});B.pad(-6,12.2,{l:2.4,doors:{s:1.1}});B.tee(0,0);B.cup(-6,12.4);}},
+    {name:'Piratenkanone',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3.8);B.pad(0,5,{open:'s'});B.cannon(0,5.2,0);B.pad(-3,15,{w:5,l:5});B.cyl(-4.5,13.8,.3);B.cyl(-1.3,16.3,.3);B.tee(0,0);B.cup(-3,15.4);}},
+    {name:'Looping-Wrack',par:3,build(B){B.pad(0,0,{doors:{n:1.2}});B.lane(0,1.2,0,5,{w:1.2});B.boost(0,3,0,0,{w:1});B.loop(0,5,0,{shift:1.8});B.lane(1.8,5,1.8,7.4,{w:1.2});
+      B.pad(1.8,10.4,{w:4,l:6,doors:{s:1.2}});B.cyl(.8,9,.3);B.cyl(2.8,10,.3);B.cyl(1.2,11.4,.3);B.tee(0,0);B.cup(2.2,12.4);}},
+    {name:'Wellensprung',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,7.8);B.slider(0,3.5,{w:1.2,amp:.6,speed:1.6,phase:0});B.slider(0,6,{w:1.2,amp:.6,speed:1.6,phase:Math.PI});
+      B.pad(0,9,{open:'se'});B.lane(1.2,9,3.6,9);B.jumpPad(3,9,0,{yaw:Math.PI/2,fwd:2});B.pad(8,9,{w:3,l:3,open:'w'});B.tee(0,0);B.cup(8.3,9);}},
+    {name:'Kapitänsdeck',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,2);B.pad(0,6,{w:7,l:8,doors:{s:W}});B.sweeper(0,6,0,{r0:0,r1:2.9,speed:.8,arms:2});B.cyl(-2.6,9,.3);B.cyl(2.6,9,.3);B.tee(0,0);B.cup(0,9.2);}},
+    {name:'Schatzinsel',par:3,build(B){B.pad(0,0,{y:2,open:'n'});B.lane(0,1.2,0,5,{y0:2,y1:.8});B.pad(0,6.2,{y:.8,open:'se'});B.lane(1.2,6.2,4,6.2,{y0:.8});B.lane(4,6.2,5.5,6.2,{y0:.8,y1:1.2});
+      B.pad(9.5,6.2,{w:4,l:4,open:'w'});B.tee(0,0,2);B.cup(10,6.6);}},
   ]},
-  {id:'c2',name:'Lavakrater',theme:'lava',diff:3,desc:'Schmale Pfade über glühender Lava, Pendel, Drehkreuze und eine Fähre. Nur für Profis.',holes:[
-    {name:'Glutpfad',par:3,build(B){B.pad(0,0,{doors:{n:1.4}});B.lane(0,1.2,0,5,{w:1.4,walls:'none'});B.pad(0,6,{w:2.2,l:2,doors:{s:1.4,e:1.4}});
-      B.lane(1.1,6,5,6,{w:1.4,walls:'none'});B.pad(6,6,{w:2,l:2.2,doors:{w:1.4,n:1.4}});B.lane(6,7.1,6,11,{w:1.4,walls:'none'});B.pad(6,12.1,{w:2.4,l:2.2,doors:{s:1.4}});B.tee(0,0);B.cup(6,12.3);}},
-    {name:'Pendel',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,14.8);B.pad(0,16,{open:'s'});B.pendulum(0,5,0,{speed:1.8,phase:0});B.pendulum(0,10,0,{speed:1.8,phase:1.7});B.tee(0,0);B.cup(0,16.2);}},
-    {name:'Doppelsprung',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4);B.lane(0,4,0,5.5,{y1:.45});B.pad(0,8,{l:2,open:'sn'});B.lane(0,9,0,10.5,{y1:.45});B.pad(0,13.5,{w:3,l:3,open:'s'});B.tee(0,0);B.cup(0,14);}},
-    {name:'Drehkreuz',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4.8);B.pad(0,7.5,{w:5.4,l:5.4,doors:{s:W,n:W}});B.sweeper(0,7.5,0,{r0:0,r1:2.45,speed:.9,arms:4});
-      B.lane(0,10.2,0,13.8);B.pad(0,15,{open:'s'});B.tee(0,0);B.cup(0,15.2);}},
-    {name:'Die Fähre',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3.8);B.pad(0,5,{open:'sn'});B.platform({from:[0,7.3],to:[0,11.7],l:2.2});B.pad(0,14,{open:'s'});B.tee(0,0);B.cup(0,14.3);}},
-    {name:'Vulkangipfel',par:4,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4);B.boost(0,2.7,0,0);B.lane(0,4,0,9,{y1:1.2});B.pad(0,10.2,{y:1.2,open:'se'});B.lane(1.2,10.2,3.4,10.2,{y0:1.2});
-      B.boost(2.3,10.2,1.2,Math.PI/2);B.lane(3.4,10.2,5.8,10.2,{y0:1.2,y1:2.2});B.pad(7,10.2,{y:2.2,open:'ws'});B.lane(7,9,7,3,{y0:2.2});B.pad(7,1.8,{y:2.2,open:'n'});B.tee(0,0);B.cup(7,1.6,2.2);}},
+  {id:'c2',name:'Lavakrater',theme:'lava',diff:3,desc:'Für Profis: Glutbrücke mit Pendel, Doppellooping, Sprungfelder über der Lava und zwei Feuerkanonen.',holes:[
+    {name:'Glutbrücke',par:3,build(B){B.pad(0,0,{doors:{n:1.3}});B.lane(0,1.2,0,10.8,{w:1.3,walls:'none'});B.pendulum(0,6,0,{speed:1.6,phase:0});B.pad(0,12,{doors:{s:1.3}});B.tee(0,0);B.cup(0,12.3);}},
+    {name:'Feuerkanone',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3.8);B.pad(0,5,{open:'s'});B.cannon(0,5.2,0);B.pad(4,14,{y:1.5,w:4,l:4});B.tee(0,0);B.cup(4,14.4,1.5);}},
+    {name:'Doppellooping',par:3,build(B){B.pad(0,0,{doors:{n:1.2}});B.lane(0,1.2,0,5,{w:1.2});B.boost(0,2.6,0,0,{w:1});B.loop(0,5,0,{shift:-1.8});B.lane(-1.8,5,-1.8,9,{w:1.2});B.boost(-1.8,6.8,0,0,{w:1});
+      B.loop(-1.8,9,0,{shift:1.8});B.lane(0,9,0,12.8,{w:1.2});B.pad(0,14,{doors:{s:1.2}});B.tee(0,0);B.cup(0,14.3);}},
+    {name:'Drehkreuz-Inferno',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3.8);B.pad(0,6.5,{w:5.4,l:5.4,doors:{s:W,e:W}});B.sweeper(0,6.5,0,{r0:0,r1:2.45,speed:1.1,arms:4});
+      B.lane(2.7,6.5,6.8,6.5);B.slider(4.8,6.5,{w:1.2,amp:.6,speed:1.8,phase:0,axis:'z'});B.pad(8,6.5,{open:'w'});B.tee(0,0);B.cup(8.2,6.5);}},
+    {name:'Glutsprünge',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3.5);B.jumpPad(0,2.8,0);B.pad(0,6.5,{w:2,l:2,open:'sn'});B.jumpPad(0,6.8,0);B.pad(0,10.5,{w:2,l:2,open:'sn'});B.jumpPad(0,10.8,0);
+      B.pad(0,15,{w:3,l:3,open:'s'});B.tee(0,0);B.cup(0,15.4);}},
+    {name:'Fähre zur Kanone',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3.8);B.pad(0,5,{open:'sn'});B.platform({from:[0,7.3],to:[0,11.7],l:2.2});B.pad(0,14,{open:'s'});B.cannon(0,14.2,0,{yaw:Math.PI/2});
+      B.pad(10,14,{y:1,w:4,l:4});B.tee(0,0);B.cup(10.3,14,1);}},
   ]},
-  {id:'c3',name:'Regenwald',theme:'dschungel',diff:2,desc:'Dichter Dschungel mit Baumstämmen, Flößen über dem Fluss und einem Wasserfall. Hier regnet es oft.',holes:[
-    {name:'Lianenpfad',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,6.8);B.pad(0,8,{open:'se'});B.lane(1.2,8,5.8,8);B.pad(7,8,{open:'wn'});B.lane(7,9.2,7,13.8);B.pad(7,15,{open:'s'});
-      B.cyl(0,4.2,.3);B.cyl(7,12,.3);B.tee(0,0);B.cup(7,15.2);}},
-    {name:'Baumstamm-Roller',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,12.8);B.pad(0,14,{open:'s'});
-      B.slider(0,4.5,{w:1.2,amp:.6,speed:1.3,phase:0,log:1});B.slider(0,7.5,{w:1.2,amp:.6,speed:1.3,phase:2,log:1});B.slider(0,10.5,{w:1.2,amp:.6,speed:1.3,phase:4,log:1});B.tee(0,0);B.cup(0,14.2);}},
+  {id:'c3',name:'Regenwald',theme:'dschungel',diff:2,desc:'Lianen-Pendel, Baumstamm-Rutsche, ein Dschungellooping mit Absprung, Flöße und eine Kanone hoch zum Wasserfall.',holes:[
+    {name:'Lianenschwung',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,6.8);B.pendulum(0,4,0,{speed:1.5,phase:0});B.pad(0,8,{open:'se'});B.lane(1.2,8,6.8,8);B.cyl(4,7.5,.3);B.cyl(5.6,8.6,.25);B.pad(8,8,{open:'w'});B.tee(0,0);B.cup(8.2,8);}},
+    {name:'Baumstamm-Rutsche',par:3,build(B){B.pad(0,0,{y:2.4,open:'n'});B.lane(0,1.2,0,5,{y0:2.4,y1:1.2});B.pad(0,6.2,{y:1.2,open:'sw'});B.lane(-1.2,6.2,-5,6.2,{y0:1.2,y1:0});B.pad(-6.2,6.2,{open:'en'});
+      B.lane(-6.2,7.4,-6.2,12);B.slider(-6.2,9.5,{w:1.2,amp:.6,speed:1.3,phase:0,log:1});B.pad(-6.2,13.2,{open:'s'});B.tee(0,0,2.4);B.cup(-6.2,13.4);}},
+    {name:'Dschungellooping',par:3,build(B){B.pad(0,0,{doors:{n:1.2}});B.lane(0,1.2,0,4.5,{w:1.2});B.boost(0,2.6,0,0,{w:1});B.loop(0,4.5,0,{shift:1.8});B.lane(1.8,4.5,1.8,7.6,{w:1.2});B.jumpPad(1.8,7,0);
+      B.pad(1.8,11,{w:3,l:3,open:'s'});B.tee(0,0);B.cup(1.8,11.4);}},
     {name:'Flussflöße',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3.8);B.pad(0,5,{open:'sn'});B.platform({from:[-4.5,7.3],to:[0,7.3],l:2.2,period:7});
       B.pad(0,9.6,{open:'sn'});B.platform({from:[0,11.9],to:[4.5,11.9],l:2.2,period:7,offset:.5});B.pad(0,14.2,{open:'s'});B.tee(0,0);B.cup(0,14.4);}},
-    {name:'Wasserfall',par:3,build(B){B.pad(0,0,{y:2,open:'n'});B.lane(0,1.2,0,4,{y0:2,y1:1.2});B.pad(0,5.2,{y:1.2,open:'sn'});B.lane(0,6.4,0,9,{y0:1.2,y1:.4});B.pad(0,10.2,{y:.4,open:'sn'});
-      B.lane(0,11.4,0,14.8,{y0:.4,y1:0});B.pad(0,16,{open:'s'});B.cyl(.5,5.2,.25,{y:1.2});B.cyl(-.5,10.2,.25,{y:.4});B.tee(0,0,2);B.cup(0,16.2);}},
+    {name:'Wasserfall-Kanone',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3.8);B.pad(0,5,{open:'s'});B.cannon(0,5.2,0);B.pad(0,13,{y:2.5,w:4,l:4});B.cyl(-1.2,12,.3,{y:2.5});B.tee(0,0);B.cup(.5,13.6,2.5);}},
     {name:'Tempelruine',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,7.8);B.pad(0,9,{open:'s',doors:{e:1.4}});B.lane(1.2,9,4.8,9,{w:1.4,walls:'none'});
       B.pad(6,9,{open:'s',doors:{w:1.4}});B.lane(6,7.8,6,1.2);B.pad(6,0,{open:'n'});B.slider(6,4.5,{w:1.2,amp:.6,speed:1.4,phase:1,log:1});B.tee(0,0);B.cup(6,-.2);}},
-    {name:'Dschungelsprung',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,5);B.lane(0,5,0,7,{y1:.6});B.pad(0,11.5,{w:4,l:4,open:'s',doors:{e:W}});B.lane(2,11.5,6.8,11.5);B.pad(8,11.5,{open:'w'});
-      B.tee(0,0);B.cup(8.2,11.5);}},
   ]},
-  {id:'c4',name:'Pyramiden',theme:'aegypten',diff:2,desc:'Sandsteinbahnen zwischen Pyramiden: Grabtüren, Treibsand, ein Obelisk-Rotor und magische Tore.',holes:[
-    {name:'Sphinx-Allee',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,12.8);B.pad(0,14,{open:'s'});B.cyl(-.6,4,.25);B.cyl(.6,6.5,.25);B.cyl(-.6,9,.25);B.tee(0,0);B.cup(0,14.2);}},
-    {name:'Grabkammer',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,12.8);B.pad(0,14,{open:'s'});B.gate(0,5,0,{speed:1.4,phase:0});B.gate(0,9,0,{speed:1.4,phase:1.6});B.tee(0,0);B.cup(0,14.2);}},
-    {name:'Pyramide',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,5,{y1:1.4});B.pad(0,6.2,{y:1.4,open:'sn'});B.lane(0,7.4,0,11.2,{y0:1.4,y1:0});B.pad(0,12.4,{open:'s'});B.tee(0,0);B.cup(0,12.6);}},
+  {id:'c4',name:'Pyramiden',theme:'aegypten',diff:2,desc:'Grabtunnel mit Falltüren, ein Skarabäus-Looping, Treibsand, ein Obelisk-Rotor und die Sphinx-Kanone.',holes:[
+    {name:'Grabtunnel',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,12.8);B.tunnel(0,3,0,11);B.gate(0,5,0,{speed:1.4,phase:0});B.gate(0,9,0,{speed:1.4,phase:1.6});B.pad(0,14,{open:'s'});B.tee(0,0);B.cup(0,14.2);}},
+    {name:'Skarabäus-Looping',par:3,build(B){B.pad(0,0,{doors:{n:1.2}});B.lane(0,1.2,0,5,{w:1.2});B.boost(0,3,0,0,{w:1});B.loop(0,5,0,{shift:-1.8});B.lane(-1.8,5,-1.8,9.8,{w:1.2});
+      B.gate(-1.8,8.2,0,{speed:1.3,phase:0,w:1.2});B.pad(-1.8,11,{doors:{s:1.2}});B.tee(0,0);B.cup(-1.8,11.3);}},
     {name:'Treibsand',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4.8);B.pad(0,6,{open:'se',skin:'sand'});B.lane(1.2,6,5.8,6);B.pad(7,6,{open:'wn'});
       B.lane(7,7.2,7,9.8,{skin:'sand'});B.lane(7,9.8,7,11.8);B.pad(7,13,{open:'s'});B.tee(0,0);B.cup(7,13.2);}},
-    {name:'Obelisk',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4);B.pad(0,7,{w:6,l:6,doors:{s:W,n:W}});B.sweeper(0,7,0,{r0:0,r1:2.4,speed:.8,arms:2});
+    {name:'Obelisk-Rotor',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4);B.pad(0,7,{w:6,l:6,doors:{s:W,n:W}});B.sweeper(0,7,0,{r0:0,r1:2.4,speed:.8,arms:2});B.cyl(-2.4,9.4,.25);B.cyl(2.4,9.4,.25);
       B.lane(0,10,0,12.8);B.pad(0,14,{open:'s'});B.tee(0,0);B.cup(0,14.2);}},
+    {name:'Sphinx-Kanone',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3.8);B.pad(0,5,{open:'s'});B.cannon(0,5.2,0,{yaw:-.15});B.pad(-2,15,{y:3,w:3.4,l:3.4});B.tee(0,0);B.cup(-2,15.2,3);}},
     {name:'Pharaos Tor',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,6.8);B.pad(0,8,{open:'s'});B.gate(0,4,0,{speed:1.2,phase:.5});
       B.portal(0,8.2,0,8,1.4,0,0);B.pad(8,1.2,{open:'n'});B.lane(8,2.4,8,8.8);B.pad(8,10,{open:'s'});B.tee(0,0);B.cup(8,10.2);}},
   ]},
-  {id:'c5',name:'Geisterfriedhof',theme:'halloween',diff:2,desc:'Nachts zwischen Grabsteinen: Kürbisse, Sensenpendel, Geistertore und ein Spukhaus.',holes:[
+  {id:'c5',name:'Geisterfriedhof',theme:'halloween',diff:2,desc:'Nachts zwischen Grabsteinen: Kürbisse, Sensenpendel, ein Geisterlooping mit Portal und eine Gruftkanone.',holes:[
     {name:'Kürbisfeld',par:2,build(B){B.pad(0,0,{w:3,open:'n'});B.lane(0,1.5,0,12.5,{w:3});B.pad(0,14,{w:3,open:'s'});
       B.cyl(-.7,4,.32);B.cyl(.7,6,.32);B.cyl(-.7,8,.32);B.cyl(.7,10,.32);B.tee(0,0);B.cup(0,14.3);}},
     {name:'Sensenpendel',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,16.8);B.pad(0,18,{open:'s'});
       B.pendulum(0,5,0,{speed:2,phase:0});B.pendulum(0,9.5,0,{speed:2,phase:1});B.pendulum(0,14,0,{speed:2,phase:2});B.tee(0,0);B.cup(0,18.2);}},
-    {name:'Geistertor',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4.8);B.pad(0,6,{open:'s'});B.portal(0,6.2,0,6,.4,0,0);
-      B.pad(6,.4,{open:'n'});B.lane(6,1.6,6,8.8);B.pad(6,10,{open:'s'});B.cyl(5.6,6,.3);B.tee(0,0);B.cup(6,10.2);}},
+    {name:'Geisterlooping',par:3,build(B){B.pad(0,0,{doors:{n:1.2}});B.lane(0,1.2,0,5,{w:1.2});B.boost(0,3,0,0,{w:1});B.loop(0,5,0,{shift:1.8});B.lane(1.8,5,1.8,8.8,{w:1.2});B.pad(1.8,10,{doors:{s:1.2}});
+      B.portal(1.8,10.3,0,8,.6,0,0);B.pad(8,.8,{open:'n'});B.lane(8,2,8,6.8);B.pad(8,8,{open:'s'});B.tee(0,0);B.cup(8,8.3);}},
     {name:'Friedhofsmauer',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,7.8);B.gate(0,4.5,0,{speed:1.2,phase:0});B.pad(0,9,{open:'sw'});B.lane(-1.2,9,-6.8,9);
       B.gate(-4,9,0,{rot:1,speed:1.4,phase:1});B.pad(-8,9,{open:'e'});B.tee(0,0);B.cup(-8.2,9);}},
-    {name:'Spukhaus',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,14.8);B.pad(0,16,{open:'s'});B.windmill(0,7.75,0);B.tee(0,0);B.cup(0,16.2);}},
-    {name:'Gruft',par:3,build(B){B.pad(0,0,{y:1.4,open:'n'});B.lane(0,1.2,0,5,{y0:1.4,y1:0});B.pad(0,8,{w:6,l:6,doors:{s:W}});B.sweeper(0,8.5,0,{r0:.55,r1:2.3,speed:1.2,arms:3});
-      B.tee(0,0,1.4);B.cup(0,8.5);}},
+    {name:'Spukhaus',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,14.8);B.cyl(-.6,4,.3);B.cyl(.6,5.8,.3);B.windmill(0,10,0);B.pad(0,16,{open:'s'});B.tee(0,0);B.cup(0,16.2);}},
+    {name:'Gruftkanone',par:2,build(B){B.pad(0,0,{y:1.4,open:'n'});B.lane(0,1.2,0,5,{y0:1.4,y1:0});B.pad(0,6.2,{open:'s'});B.cannon(0,6.4,0,{yaw:-Math.PI/2});B.pad(-10,6.4,{w:4,l:4});B.cyl(-9,5.4,.3);B.tee(0,0,1.4);B.cup(-10.4,6.8);}},
   ]},
-  {id:'c6',name:'Weihnachtsdorf',theme:'weihnachten',diff:1,desc:'Verschneite Bahnen mit Zuckerstangen, Geschenkekarussell und spiegelglatten Eisflächen.',holes:[
+  {id:'c6',name:'Weihnachtsdorf',theme:'weihnachten',diff:1,desc:'Schlittenbahn, Geschenkekarussell, ein Eis-Looping, ein Sprung in den Schornstein und die Schneeballkanone.',holes:[
     {name:'Schlittenbahn',par:2,build(B){B.pad(0,0,{y:1,open:'n'});B.lane(0,1.2,0,8,{y0:1,y1:0,skin:'ice'});B.lane(0,8,0,12.8);B.pad(0,14,{open:'s'});B.cyl(-.5,11,.2);B.cyl(.5,11,.2);B.tee(0,0,1);B.cup(0,14.2);}},
     {name:'Geschenkekarussell',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4.8);B.pad(0,7.5,{w:5.4,l:5.4,doors:{s:W,n:W}});B.sweeper(0,7.5,0,{r0:0,r1:2.45,speed:.9,arms:4});
       B.lane(0,10.2,0,12.8);B.pad(0,14,{open:'s'});B.tee(0,0);B.cup(0,14.2);}},
     {name:'Eisfläche',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3);B.pad(0,7,{w:6,l:8,doors:{s:W},skin:'ice'});B.cyl(-1.5,6,.3);B.cyl(1.5,6,.3);B.cyl(0,8,.3);B.tee(0,0);B.cup(0,9.8);}},
-    {name:'Rentierkurve',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,7.8);B.slider(0,4.5,{w:1.2,amp:.6,speed:1.5,phase:0});B.pad(0,9,{open:'se'});B.lane(1.2,9,6.8,9,{skin:'ice'});B.pad(8,9,{open:'w'});B.tee(0,0);B.cup(8.2,9);}},
-    {name:'Schornstein',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,6,{y1:1.2});B.pad(0,7.2,{y:1.2,open:'sn'});B.lane(0,8.4,0,9.6,{y0:1.2,y1:1.5});B.pad(0,13,{w:3,l:3});B.tee(0,0);B.cup(0,13.2);}},
-    {name:'Spielzeugfabrik',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,14.8);B.pad(0,16,{open:'s',skin:'ice'});B.windmill(0,7.75,0);B.tee(0,0);B.cup(0,16.2);}},
+    {name:'Rentier-Looping',par:2,build(B){B.pad(0,0,{doors:{n:1.2}});B.lane(0,1.2,0,5,{w:1.2,skin:'ice'});B.loop(0,5,0,{shift:1.8});B.lane(1.8,5,1.8,8.8,{w:1.2,skin:'ice'});B.pad(1.8,10,{doors:{s:1.2}});B.tee(0,0);B.cup(1.8,10.3);}},
+    {name:'Schornstein',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,7);B.jumpPad(0,6.2,0,{vy:6});B.pad(0,10,{w:3,l:3,y:1.2});B.tee(0,0);B.cup(0,10.2,1.2);}},
+    {name:'Schneeballkanone',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3.8);B.pad(0,5,{open:'s'});B.cannon(0,5.2,0,{yaw:.45});B.pad(5,14,{w:4,l:4,y:.5});B.cyl(4,13,.25,{y:.5});B.cyl(6.2,15.2,.25,{y:.5});B.tee(0,0);B.cup(5,14.2,.5);}},
   ]},
-  {id:'c7',name:'Weltraumstation',theme:'weltall',diff:3,desc:'Schwerelos weit springen: geringe Schwerkraft, Wurmlöcher, Asteroiden und eine fliegende Plattform.',holes:[
-    {name:'Startrampe',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,12.8);B.boost(0,4,0,0);B.pad(0,14,{open:'s'});B.cyl(0,9,.3);B.tee(0,0);B.cup(0,14.2);}},
+  {id:'c7',name:'Weltraumstation',theme:'weltall',diff:3,desc:'Geringe Schwerkraft: Asteroidengürtel, Mondsprung, Wurmlöcher, ein riesiger Looping und die Orbitalkanone.',holes:[
+    {name:'Asteroidengürtel',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,14.8);B.pad(0,16,{open:'s'});
+      B.slider(0,4,{w:1,amp:.7,speed:2,phase:0});B.slider(0,7,{w:1,amp:.7,speed:2.3,phase:1});B.slider(0,10,{w:1,amp:.7,speed:1.8,phase:2});B.slider(0,13,{w:1,amp:.7,speed:2.1,phase:3});B.tee(0,0);B.cup(0,16.2);}},
     {name:'Mondsprung',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4);B.lane(0,4,0,5.5,{y1:.45});B.pad(0,12.5,{w:4,l:5,open:'s'});B.tee(0,0);B.cup(0,13);}},
     {name:'Wurmloch',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4.8);B.pad(0,6,{open:'s'});B.portal(0,6.2,0,8,.4,0,0);B.pad(8,.4,{open:'n'});B.lane(8,1.6,8,4.8);B.pad(8,6,{open:'s'});
       B.portal(8,6.2,0,16,.4,0,0);B.pad(16,.4,{open:'n'});B.lane(16,1.6,16,6.8);B.pad(16,8,{open:'s'});B.tee(0,0);B.cup(16,8.2);}},
-    {name:'Asteroidengürtel',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,14.8);B.pad(0,16,{open:'s'});
-      B.slider(0,4,{w:1,amp:.7,speed:2,phase:0});B.slider(0,7,{w:1,amp:.7,speed:2.3,phase:1});B.slider(0,10,{w:1,amp:.7,speed:1.8,phase:2});B.slider(0,13,{w:1,amp:.7,speed:2.1,phase:3});B.tee(0,0);B.cup(0,16.2);}},
-    {name:'Raumfähre',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3.8);B.pad(0,5,{open:'sn'});B.platform({from:[0,7.3],to:[0,13.7],l:2.2,period:8});B.pad(0,16,{open:'s'});B.tee(0,0);B.cup(0,16.2);}},
+    {name:'Schwerelos-Looping',par:2,build(B){B.pad(0,0,{doors:{n:1.2}});B.lane(0,1.2,0,5,{w:1.2});B.loop(0,5,0,{shift:2,r:1.7});B.lane(2,5,2,9.8,{w:1.2});B.pad(2,11,{doors:{s:1.2}});B.tee(0,0);B.cup(2,11.3);}},
+    {name:'Orbitalkanone',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3.8);B.pad(0,5,{open:'s'});B.cannon(0,5.2,0);B.pad(0,20,{w:4,l:4});B.cyl(0,18.8,.3);B.tee(0,0);B.cup(.6,20.6);}},
     {name:'Schwarzes Loch',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4.5);B.pad(0,8,{w:7,l:7,doors:{s:W}});B.sweeper(0,8.3,0,{r0:.6,r1:2.9,speed:1.6,arms:3});B.tee(0,0);B.cup(0,8.3);}},
   ]},
-  {id:'c8',name:'Zuckerland',theme:'suess',diff:1,desc:'Bonbonbunte Bahnen über dem Schokofluss: Lollis, Gummiwände und ein Tortenturm.',holes:[
+  {id:'c8',name:'Zuckerland',theme:'suess',diff:1,desc:'Lolli-Allee, Gummiwände, Schokofluss, eine Trampolintorte, ein Zuckerlooping und die Bonbonkanone.',holes:[
     {name:'Lolli-Allee',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,12.8);B.pad(0,14,{open:'s'});B.cyl(-.6,4,.28);B.cyl(.6,6.5,.28);B.cyl(-.6,9,.28);B.cyl(.6,11.5,.28);B.tee(0,0);B.cup(0,14.2);}},
     {name:'Gummiwände',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,7.8);B.pad(0,9,{open:'se',wallKind:'bumper'});B.lane(1.2,9,6.8,9);B.pad(8,9,{open:'w',wallKind:'bumper'});B.tee(0,0);B.cup(8.2,9);}},
     {name:'Schokofluss',par:3,build(B){B.pad(0,0,{doors:{n:1.2}});B.lane(0,1.2,0,5,{w:1.2,walls:'none'});B.pad(0,6,{w:2,l:2,doors:{s:1.2,n:1.2}});B.lane(0,7,0,11,{w:1.2,walls:'none'});
       B.pad(0,12.2,{l:2.4,doors:{s:1.2}});B.tee(0,0);B.cup(0,12.4);}},
-    {name:'Zuckerwatte-Hügel',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3);B.lane(0,3,0,5,{y1:.6});B.lane(0,5,0,7,{y0:.6,y1:0});B.lane(0,7,0,9,{y1:.6});B.lane(0,9,0,11,{y0:.6,y1:0});
-      B.lane(0,11,0,12.8);B.pad(0,14,{open:'s'});B.tee(0,0);B.cup(0,14.2);}},
-    {name:'Bonbonmaschine',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,14.8);B.pad(0,16,{open:'s'});B.windmill(0,7.75,0);B.tee(0,0);B.cup(0,16.2);}},
-    {name:'Tortenturm',par:4,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4);B.boost(0,2.7,0,0);B.lane(0,4,0,9,{y1:1.2});B.pad(0,10.2,{y:1.2,open:'sw'});B.lane(-1.2,10.2,-3.4,10.2,{y0:1.2});
-      B.boost(-2.3,10.2,1.2,-Math.PI/2);B.lane(-3.4,10.2,-5.8,10.2,{y0:1.2,y1:2.2});B.pad(-7,10.2,{y:2.2,open:'es'});B.lane(-7,9,-7,3,{y0:2.2});B.pad(-7,1.8,{y:2.2,open:'n'});B.tee(0,0);B.cup(-7,1.6,2.2);}},
+    {name:'Trampolintorte',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3);B.jumpPad(0,2.4,0,{vy:6});B.pad(0,5,{y:.8,w:3,l:3.6,open:'s'});B.jumpPad(0,6,.8,{vy:6});B.pad(0,9,{y:1.6,w:3,l:3.6,open:'s'});B.tee(0,0);B.cup(0,9.7,1.6);}},
+    {name:'Zuckerlooping',par:3,build(B){B.pad(0,0,{doors:{n:1.2}});B.lane(0,1.2,0,5,{w:1.2});B.boost(0,3,0,0,{w:1});B.loop(0,5,0,{shift:-1.8});B.lane(-1.8,5,-1.8,7.8,{w:1.2});B.pad(-1.8,9,{doors:{s:1.2},open:'w'});
+      B.lane(-3,9,-6.8,9);B.pad(-8,9,{open:'e'});B.cyl(-5,8.5,.28);B.tee(0,0);B.cup(-8.2,9);}},
+    {name:'Bonbonkanone',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3.8);B.pad(0,5,{open:'s'});B.cannon(0,5.2,0,{yaw:-.35});B.pad(-4,14,{y:2.5,w:4,l:4});B.cyl(-5,13.2,.28,{y:2.5});B.cyl(-3,15,.28,{y:2.5});B.tee(0,0);B.cup(-4,14.4,2.5);}},
   ]},
-  {id:'c9',name:'Kirschblütengarten',theme:'japan',diff:2,desc:'Ein ruhiger Zen-Garten mit Bambus, Steinlaternen, Bogenbrücke und Tempeltoren.',holes:[
+  {id:'c9',name:'Kirschblütengarten',theme:'japan',diff:2,desc:'Bambusweg, Bogenbrücke, ein Sprung über den Koi-Teich, Bambus-Rotor, Tempeltore und ein Zen-Looping.',holes:[
     {name:'Bambusweg',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,12.8);B.pad(0,14,{open:'s'});B.cyl(-.55,5,.25);B.cyl(.55,5,.25);B.cyl(0,9,.3);B.tee(0,0);B.cup(0,14.2);}},
     {name:'Bogenbrücke',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,3);B.lane(0,3,0,5.5,{y1:.6,w:1.3,walls:'none'});B.lane(0,5.5,0,8,{y0:.6,y1:0,w:1.3,walls:'none'});B.lane(0,8,0,10.8);B.pad(0,12,{open:'s'});B.tee(0,0);B.cup(0,12.2);}},
-    {name:'Koi-Teich',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,6.8);B.pad(0,8,{open:'s',doors:{w:1.2}});B.lane(-1.2,8,-6.8,8,{w:1.2,walls:'none'});B.pad(-8,8,{open:'n',doors:{e:1.2}});
-      B.lane(-8,9.2,-8,12.8);B.pad(-8,14,{open:'s'});B.tee(0,0);B.cup(-8,14.2);}},
+    {name:'Koi-Sprung',par:2,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4.6);B.jumpPad(0,4,0,{vy:4.5});B.pad(0,8.6,{w:3,l:3.2,open:'s'});B.tee(0,0);B.cup(0,9);}},
     {name:'Bambus-Rotor',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,4);B.pad(0,7,{w:6,l:6,doors:{s:W}});B.sweeper(0,7.6,0,{r0:.55,r1:2.3,speed:1.3,arms:3});B.tee(0,0);B.cup(0,7.6);}},
     {name:'Tempeltore',par:3,build(B){B.pad(0,0,{open:'n'});B.lane(0,1.2,0,14.8);B.pad(0,16,{open:'s'});B.gate(0,4.5,0,{speed:1.3,phase:0});B.gate(0,8,0,{speed:1.3,phase:1.2});B.gate(0,11.5,0,{speed:1.3,phase:2.4});B.tee(0,0);B.cup(0,16.2);}},
-    {name:'Zen-Spirale',par:3,build(B){B.pad(0,0,{y:1.2,open:'n'});B.lane(0,1.2,0,5.8,{y0:1.2,y1:.6});B.pad(0,7,{y:.6,open:'se'});B.lane(1.2,7,4.8,7,{y0:.6});B.pad(6,7,{y:.6,open:'wn'});
-      B.lane(6,8.2,6,12.8,{y0:.6,y1:0});B.pad(6,14,{open:'s'});B.cyl(6.5,10.5,.25,{y:.3});B.tee(0,0,1.2);B.cup(6,14.2);}},
+    {name:'Zen-Looping',par:2,build(B){B.pad(0,0,{y:1.5,doors:{n:1.2}});B.lane(0,1.2,0,5,{w:1.2,y0:1.5,y1:0});B.loop(0,5,0,{shift:1.8});B.lane(1.8,5,1.8,8.8,{w:1.2});B.pad(1.8,10,{doors:{s:1.2}});B.tee(0,0,1.5);B.cup(1.8,10.3);}},
   ]},
 ];
 
@@ -721,7 +723,7 @@ let H=null, holeGroup=null;
 
 class Builder{
   constructor(theme){
-    const t=this.t=theme;this.colliders=[];this.animated=[];this.triggers=[];this.portals=[];this.group=new THREE.Group();this.supports=[];this.bounds=new THREE.Box3();
+    const t=this.t=theme;this.colliders=[];this.animated=[];this.triggers=[];this.portals=[];this.cannons=[];this.group=new THREE.Group();this.supports=[];this.bounds=new THREE.Box3();
     const side=texMat(t.side),top=texMat(t.top,{roughness:.95});
     this.mats={floor:[side,side,top,side,side,side],wall:texMat(t.wall,{roughness:.7}),cap:stdMat(t.cap,{roughness:.5}),
       obstacle:texMat(t.wall,{color:shade(t.accent,1.2),roughness:.55}),support:texMat(t.side),bumperWall:stdMat(t.accent,{roughness:.3})};
@@ -790,6 +792,9 @@ class Builder{
     this.cupPos=new THREE.Vector3(x,y,z);
     const hole=new THREE.Mesh(new THREE.CircleGeometry(CUP_R,32),new THREE.MeshBasicMaterial({color:0x050505}));hole.rotation.x=-Math.PI/2;hole.position.set(x,y+.004,z);this.group.add(hole);
     const ring=new THREE.Mesh(new THREE.RingGeometry(CUP_R,CUP_R+.035,32),stdMat(0xffffff));ring.rotation.x=-Math.PI/2;ring.position.set(x,y+.005,z);this.group.add(ring);
+    // Kuhle: flache Mulde rund ums Loch (Optik), die Physik zieht den Ball hinein
+    const dip=new THREE.Mesh(new THREE.CircleGeometry(DIP_R,48),new THREE.MeshBasicMaterial({map:TEX.dip(),transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}));
+    dip.rotation.x=-Math.PI/2;dip.position.set(x,y+.003,z);this.group.add(dip);
     const flag=new THREE.Group();flag.position.set(x,y,z);
     const pole=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,1.3,8),stdMat(0xf5f5f5));pole.position.y=.65;pole.castShadow=true;flag.add(pole);
     const cg=new THREE.PlaneGeometry(.55,.36,8,3);cg.translate(.275,0,0);
@@ -832,14 +837,66 @@ class Builder{
   }
   slider(x,z,o){
     const base=new THREE.Vector3(x,.25,z),mat=o.log?texMat(['wood','#7a5230'],{roughness:.8}):undefined;
-    this.addBox(base.clone(),new THREE.Vector3(o.w/2,.25,.3),new THREE.Quaternion(),'obstacle',{mat,anim:(t,c)=>{c.pos.copy(base);c.pos.x+=Math.sin(t*o.speed+o.phase)*o.amp;}});
+    const ax=o.axis==='z';
+    this.addBox(base.clone(),ax?new THREE.Vector3(.3,.25,o.w/2):new THREE.Vector3(o.w/2,.25,.3),new THREE.Quaternion(),'obstacle',{mat,anim:(t,c)=>{c.pos.copy(base);const d=Math.sin(t*o.speed+o.phase)*o.amp;if(ax)c.pos.z+=d;else c.pos.x+=d;}});
   }
   gate(x,z,y,o){
-    const w=W-.04,base=new THREE.Vector3(x,y+.3,z),q=new THREE.Quaternion().setFromAxisAngle(_yAxis,o.rot?Math.PI/2:0);
+    const LW=o.w??W,w=LW-.04,base=new THREE.Vector3(x,y+.3,z),q=new THREE.Quaternion().setFromAxisAngle(_yAxis,o.rot?Math.PI/2:0);
     this.addBox(base.clone(),new THREE.Vector3(w/2,.3,.15),q,'obstacle',{anim:(t,c)=>{const s=clamp(Math.sin(t*o.speed+o.phase)*1.4+.2,0,1);c.pos.copy(base);c.pos.y+=s*.75;}});
     const fm=this.mats.cap;
-    for(const s of [-1,1]){const post=new THREE.Mesh(new THREE.BoxGeometry(.16,1.5,.32),fm);const off=new THREE.Vector3(s*(W/2+.2),0,0).applyQuaternion(q);post.position.set(x+off.x,y+.75,z+off.z);post.quaternion.copy(q);post.castShadow=true;this.group.add(post);}
-    const top=new THREE.Mesh(new THREE.BoxGeometry(W+.6,.16,.36),fm);top.position.set(x,y+1.5,z);top.quaternion.copy(q);top.castShadow=true;this.group.add(top);
+    for(const s of [-1,1]){const post=new THREE.Mesh(new THREE.BoxGeometry(.16,1.5,.32),fm);const off=new THREE.Vector3(s*(LW/2+.2),0,0).applyQuaternion(q);post.position.set(x+off.x,y+.75,z+off.z);post.quaternion.copy(q);post.castShadow=true;this.group.add(post);}
+    const top=new THREE.Mesh(new THREE.BoxGeometry(LW+.6,.16,.36),fm);top.position.set(x,y+1.5,z);top.quaternion.copy(q);top.castShadow=true;this.group.add(top);
+  }
+  // Looping: Einfahrt bei (x0,z0) Richtung +z, Ausfahrt um 'shift' seitlich versetzt
+  loop(x0,z0,y0,o={}){
+    const Rl=o.r??1.3,w=o.w??1.2,shift=o.shift??1.8,N=o.n??40,t=.15,TAU=Math.PI*2,seg=TAU*Rl/N*1.15,X=new THREE.Vector3(1,0,0);
+    const railM=this.mats.wall;
+    for(let i=0;i<N;i++){
+      const th=(i+.5)/N*TAU,sx=x0+shift*(i+.5)/N;
+      const nrm=new THREE.Vector3(0,Math.cos(th),-Math.sin(th));
+      const P=new THREE.Vector3(sx,y0+Rl-Rl*Math.cos(th),z0+Rl*Math.sin(th));
+      const q=new THREE.Quaternion().setFromAxisAngle(X,-th);
+      this.addBox(P.clone().addScaledVector(nrm,-t/2),new THREE.Vector3(w/2,t/2,seg/2),q,'floor');
+      for(const s of [-1,1])this.addBox(P.clone().addScaledVector(nrm,.1).add(new THREE.Vector3(s*(w/2+.05),0,0)),new THREE.Vector3(.05,.2,seg/2),q,'wall',{cap:false,mat:railM});
+    }
+    this.supports.push([x0,z0-Rl,y0],[x0+shift,z0+Rl,y0]);
+  }
+  // Sprungfeld: schleudert den Ball nach oben (und optional nach vorne)
+  jumpPad(x,z,y,o={}){
+    const yaw=o.yaw??0,w=o.w??1.2,l=o.l??1,q=new THREE.Quaternion().setFromAxisAngle(_yAxis,yaw);
+    const g=new THREE.Group();g.position.set(x,y,z);g.quaternion.copy(q);this.group.add(g);
+    const base=new THREE.Mesh(new THREE.BoxGeometry(w,.02,l),stdMat(0x2a2a30,{metalness:.5}));base.position.y=.01;g.add(base);
+    const top=new THREE.Mesh(new THREE.BoxGeometry(w*.9,.025,l*.9),new THREE.MeshStandardMaterial({map:TEX.jump(),emissive:0x1aff6a,emissiveIntensity:.3,roughness:.4}));top.position.y=.03;g.add(top);
+    for(const sx of [-1,1])for(const sz of [-1,1]){const sp=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.03,8),stdMat(0xd0d0d0,{metalness:.8}));sp.position.set(sx*w*.38,.02,sz*l*.38);g.add(sp);}
+    this.triggers.push({type:'jump',half:new THREE.Vector3(w/2,.35,l/2),inv:new THREE.Matrix4().compose(new THREE.Vector3(x,y,z),q,ONE).invert(),
+      dir:new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw)),vy:o.vy??5,fwd:o.fwd??0,mesh:top,sq:0});
+  }
+  // Kanone: Ball rollt in die Öffnung, dann zielen und abfeuern
+  cannon(x,z,y,o={}){
+    const c={pos:new THREE.Vector3(x,y,z),yaw:o.yaw??0,pitch:o.pitch??.6,cool:0,recoil:0};
+    c.yaw0=c.yaw;c.pitch0=c.pitch;
+    const metal=stdMat(0x2e2e34,{metalness:.8,roughness:.32});
+    const hole=new THREE.Mesh(new THREE.CircleGeometry(.4,32),new THREE.MeshBasicMaterial({color:0x080808}));hole.rotation.x=-Math.PI/2;hole.position.set(x,y+.006,z);this.group.add(hole);
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(.42,.05,10,32),stdMat(this.t.accent,{roughness:.4}));ring.rotation.x=-Math.PI/2;ring.position.set(x,y+.03,z);this.group.add(ring);
+    const yawG=new THREE.Group();yawG.position.set(x,y,z);this.group.add(yawG);
+    const wood=texMat(['wood','#7a4a2a']);
+    for(const s of [-1,1]){const cheek=new THREE.Mesh(new THREE.BoxGeometry(.12,.62,.75),wood);cheek.position.set(s*.52,.42,-.05);cheek.castShadow=true;yawG.add(cheek);
+      const wh=new THREE.Mesh(new THREE.CylinderGeometry(.26,.26,.08,22),metal);wh.rotation.z=Math.PI/2;wh.position.set(s*.62,.26,-.05);wh.castShadow=true;yawG.add(wh);}
+    const pitchG=new THREE.Group();pitchG.position.y=.75;yawG.add(pitchG);
+    const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.19,.25,1.3,26),metal);barrel.rotation.x=Math.PI/2;barrel.position.z=.45;barrel.castShadow=true;pitchG.add(barrel);
+    const muzzle=new THREE.Mesh(new THREE.TorusGeometry(.2,.05,10,24),metal);muzzle.position.z=1.1;pitchG.add(muzzle);
+    const back=new THREE.Mesh(new THREE.SphereGeometry(.26,18,12),metal);back.position.z=-.2;back.castShadow=true;pitchG.add(back);
+    const band=new THREE.Mesh(new THREE.TorusGeometry(.225,.035,8,24),stdMat(this.t.accent));band.position.z=.25;pitchG.add(band);
+    c.yawG=yawG;c.pitchG=pitchG;this.cannons.push(c);
+    this.bounds.expandByPoint(new THREE.Vector3(x,y+1.6,z));
+  }
+  // Tunnel: halbtransparenter Bogen über der Bahn (nur Optik)
+  tunnel(ax,az,bx,bz,o={}){
+    const y=o.y??0,w=o.w??W,dx=bx-ax,dz=bz-az,L=Math.hypot(dx,dz),r=w/2+.3;
+    const geo=new THREE.CylinderGeometry(r,r,L,28,1,true,Math.PI/2,Math.PI);
+    const m=new THREE.Mesh(geo,stdMat(this.t.cap,{side:THREE.DoubleSide,transparent:true,opacity:.5,roughness:.5}));m.rotation.x=Math.PI/2;
+    const g=new THREE.Group();g.position.set((ax+bx)/2,y+WALL_H,(az+bz)/2);g.rotation.y=Math.atan2(dx,dz);g.add(m);this.group.add(g);
+    for(const t of [-L/2,L/2]){const rib=new THREE.Mesh(new THREE.TorusGeometry(r,.07,8,24,Math.PI),this.mats.cap);rib.position.z=t;g.add(rib);rib.castShadow=true;}
   }
   sweeper(x,z,y,o){
     const pivot=new THREE.Vector3(x,y+.2,z),len=o.r1-o.r0,off=(o.r0+o.r1)/2;
@@ -1091,6 +1148,19 @@ let hatMesh=makeHat(look.hat);scene.add(hatMesh);
 const aimArrow=(()=>{const s=new THREE.Shape();s.moveTo(-.05,0);s.lineTo(.05,0);s.lineTo(.05,.75);s.lineTo(.14,.75);s.lineTo(0,1);s.lineTo(-.14,.75);s.lineTo(-.05,.75);s.lineTo(-.05,0);
   const m=new THREE.Mesh(new THREE.ShapeGeometry(s),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.85,depthWrite:false}));
   m.rotation.x=-Math.PI/2;m.rotation.z=Math.PI;const g=new THREE.Group();g.add(m);scene.add(g);g.userData.m=m;return g;})();
+// Flugbahn-Vorschau für die Kanone
+const cpGeo=new THREE.BufferGeometry();cpGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(60*3),3));
+const cannonPreview=new THREE.Points(cpGeo,new THREE.PointsMaterial({color:0xffffff,size:.12,transparent:true,opacity:.85,depthWrite:false}));cannonPreview.frustumCulled=false;scene.add(cannonPreview);
+function updateCannonPreview(){
+  const c=game.cannon;cannonPreview.visible=!!(c&&ball.state==='cannon');if(!cannonPreview.visible)return;
+  const pw=Math.max(.05,game.charging?game.power:.5);
+  const d=new THREE.Vector3(Math.sin(c.yaw)*Math.cos(c.pitch),Math.sin(c.pitch),Math.cos(c.yaw)*Math.cos(c.pitch));
+  const p=new THREE.Vector3(c.pos.x,c.pos.y+.75,c.pos.z).addScaledVector(d,1.25),v=d.clone().multiplyScalar(4+10*pw);
+  const a=cpGeo.attributes.position.array;let n=0;const st=1/40;
+  for(let i=0;i<240&&n<60;i++){v.y-=H.grav*st;v.x+=(wind.x-v.x)*WIND_AIR*st;v.z+=(wind.z-v.z)*WIND_AIR*st;p.addScaledVector(v,st);
+    if(i%4===0){a[n*3]=p.x;a[n*3+1]=p.y;a[n*3+2]=p.z;n++;}if(p.y<H.bounds.min.y-1)break;}
+  cpGeo.setDrawRange(0,n);cpGeo.attributes.position.needsUpdate=true;cannonPreview.material.opacity=game.charging?.95:.45;
+}
 let pv=null;
 function applyLook(){
   ballMesh.material.map.dispose();ballMesh.material.dispose();ballMesh.material=ballMaterial(look.color,look.pattern);
@@ -1114,7 +1184,7 @@ function loadHole(ci,hi,wxKey){
   weatherNow=WEATHER[wxKey];
   const B=new Builder(theme);def.build(B);
   buildEnvironment(B,theme,rng(ci*100+hi*7+3),weatherNow);
-  H={def,theme,B,colliders:B.colliders,animated:B.animated,triggers:B.triggers,portals:B.portals,tee:B.teePos,cup:B.cupPos,flag:B.flag,bounds:B.bounds,grav:G*(theme.gravity||1)};
+  H={def,theme,B,colliders:B.colliders,animated:B.animated,triggers:B.triggers,portals:B.portals,cannons:B.cannons,tee:B.teePos,cup:B.cupPos,flag:B.flag,bounds:B.bounds,grav:G*(theme.gravity||1)};
   holeGroup=B.group;scene.add(holeGroup);
   rollWind();applyWeather(theme);
   B.pose(0);B.pose(0);
@@ -1138,13 +1208,30 @@ function startHole(hi){
   placeBall(H.tee);ball.last.copy(ball.p);
   game.yaw=H.B.teeYaw??0;game.pitch=.42;game.dist=5;game.power=0;game.charging=false;
   game.view='over';game.overT=1.6;const o=overviewCam(H.bounds);cam.pos.copy(o.pos);cam.target.copy(o.target);
-  trailFX.reset();updateHUD();
+  trailFX.reset();updateHUD();updateHint();
   const wi=WX_INFO[game.wxList[hi]];
   showMsg(`Loch ${hi+1}`,`${H.def.name} · Par ${H.def.par}`+(wi?` · ${weatherNow.name}: ${wi}`:''),2600);
 }
-function placeBall(p){ball.p.set(p.x,p.y+R+.01,p.z);ball.v.set(0,0,0);ball.state='aim';ball.restT=0;ball.grounded=true;}
+function placeBall(p){game.cannon=null;ball.p.set(p.x,p.y+R+.01,p.z);ball.v.set(0,0,0);ball.state='aim';ball.restT=0;ball.grounded=true;}
 function aimDir(){return new THREE.Vector3(Math.sin(game.yaw),0,Math.cos(game.yaw));}
+function enterCannon(c){
+  ball.state='cannon';ball.v.set(0,0,0);ball.p.set(c.pos.x,c.pos.y+.75,c.pos.z);game.cannon=c;
+  c.yaw=c.yaw0;c.pitch=c.pitch0;game.yaw=c.yaw;game.power=0;game.charging=false;
+  sound.clunk();trailFX.reset();updateHint();
+  showMsg('Kanone!',isTouch?'Ziehen = zielen · SCHLAG = Feuer':'A / D zielen · W / S Höhe · Leertaste = Feuer',2600);
+}
+function fireCannon(){
+  const c=game.cannon,pw=Math.max(.05,game.power);
+  const d=new THREE.Vector3(Math.sin(c.yaw)*Math.cos(c.pitch),Math.sin(c.pitch),Math.cos(c.yaw)*Math.cos(c.pitch));
+  ball.p.set(c.pos.x,c.pos.y+.75,c.pos.z).addScaledVector(d,1.25);ball.v.copy(d).multiplyScalar(4+10*pw);
+  ball.state='moving';ball.moveT=0;ball.restT=0;ball.grounded=false;c.cool=game.simT+1.5;c.recoil=1;game.cannon=null;game.power=0;
+  sound.boom();
+  for(let i=0;i<40;i++){const rnd=Math.random;trailFX.soft.spawn({x:ball.p.x,y:ball.p.y,z:ball.p.z,v:d.clone().multiplyScalar(1+rnd()*3).add(new THREE.Vector3((rnd()-.5)*1.5,(rnd()-.5)*1.5,(rnd()-.5)*1.5)),
+    life:.4+rnd()*.5,c0:col(i<14?'#ffd27a':'#9a9aa0'),c1:col(i<14?'#ff3a00':'#303034'),s0:.45,s1:.9,fade:1.3,drag:2.5});}
+  updateHint();updateHUD();
+}
 function shoot(){
+  if(ball.state==='cannon')return fireCannon();
   const pw=Math.max(.08,game.power);ball.v.addScaledVector(aimDir(),VMAX*pw);
   ball.state='moving';ball.moveT=0;ball.restT=0;game.strokes++;game.power=0;sound.hit(pw);updateHUD();
 }
@@ -1180,7 +1267,10 @@ function physicsStep(dt){
   if(ball.grounded){v.x+=wind.x*WIND_GROUND*dt;v.z+=wind.z*WIND_GROUND*dt;}else{v.x+=(wind.x-v.x)*WIND_AIR*dt;v.z+=(wind.z-v.z)*WIND_AIR*dt;}
   if(ball.grounded)for(const tr of H.triggers){
     _lp.copy(p).applyMatrix4(tr.inv);
-    if(Math.abs(_lp.x)<tr.half.x&&Math.abs(_lp.z)<tr.half.z&&Math.abs(_lp.y)<tr.half.y+R){if(v.dot(tr.dir)<9.5)v.addScaledVector(tr.dir,20*dt);if(!tr.cool||game.simT>tr.cool){sound.boost();tr.cool=game.simT+1;}}
+    if(Math.abs(_lp.x)<tr.half.x&&Math.abs(_lp.z)<tr.half.z&&Math.abs(_lp.y)<tr.half.y+R){
+      if(tr.type==='jump'){if(game.simT>(tr.cool||0)&&Math.hypot(v.x,v.z)>.6){v.y=tr.vy;if(tr.fwd)v.addScaledVector(tr.dir,tr.fwd);p.y+=.03;ball.grounded=false;tr.cool=game.simT+.6;tr.sq=1;sound.boing();}}
+      else{if(v.dot(tr.dir)<9.5)v.addScaledVector(tr.dir,20*dt);if(!tr.cool||game.simT>tr.cool){sound.boost();tr.cool=game.simT+1;}}
+    }
   }
   if(ball.portalCool>0)ball.portalCool-=dt;
   else for(const pt of H.portals){
@@ -1188,8 +1278,12 @@ function physicsStep(dt){
       const hs=Math.max(1.5,Math.hypot(v.x,v.z));p.set(pt.b.x,pt.b.y+R+.02,pt.b.z).addScaledVector(pt.dir,.5);v.set(pt.dir.x*hs,0,pt.dir.z*hs);
       ball.portalCool=.6;sound.portal();trailFX.reset();break;}
   }
+  if(ball.state==='moving')for(const c of H.cannons){
+    if(game.simT>c.cool&&Math.hypot(p.x-c.pos.x,p.z-c.pos.z)<.42&&Math.abs(p.y-R-c.pos.y)<.35){enterCannon(c);return;}
+  }
+  // Kuhle: Hangabtrieb Richtung Lochmitte
   const cdx=H.cup.x-p.x,cdz=H.cup.z-p.z,cd=Math.hypot(cdx,cdz);
-  if(ball.grounded&&cd<CUP_R*1.7&&cd>.02&&Math.abs(p.y-R-H.cup.y)<.15){v.x+=cdx/cd*1.6*dt;v.z+=cdz/cd*1.6*dt;}
+  if(ball.grounded&&cd<DIP_R&&cd>.02&&Math.abs(p.y-R-H.cup.y)<.15){const k=H.grav*.32*(.45+.55*(1-cd/DIP_R));v.x+=cdx/cd*k*dt;v.z+=cdz/cd*k*dt;}
   if(v.lengthSq()>625)v.setLength(25);
   p.addScaledVector(v,dt);
   let grounded=false,gMu=0,gAnim=false;_gVc.set(0,0,0);_gN.set(0,1,0);
@@ -1232,7 +1326,7 @@ function physicsStep(dt){
     const sp=_a.length(),dec=gMu*weatherNow.fric*H.grav*dt;if(sp<=dec)_a.set(0,0,0);else _a.multiplyScalar(1-dec/sp);v.copy(_gVc).add(_a).addScaledVector(_gN,vn);}
   v.multiplyScalar(1-.05*dt);
   if(p.y<H.bounds.min.y-5){penalty(H.theme.hazard);return;}
-  if(cd<CUP_R-R*.3&&Math.abs(p.y-R-H.cup.y)<.14&&Math.hypot(v.x-_gVc.x,v.z-_gVc.z)<3.4){holed();return;}
+  if(cd<CUP_R-.03&&Math.abs(p.y-R-H.cup.y)<.14&&Math.hypot(v.x-_gVc.x,v.z-_gVc.z)<4.2){holed();return;}
   const rel=_vr.subVectors(v,_gVc).length();
   if(grounded&&rel<.06)ball.restT+=dt;else ball.restT=0;
   if(ball.state==='moving'){ball.moveT+=dt;if(ball.restT>.35||ball.moveT>40){ball.state='aim';if(!gAnim)ball.last.copy(p);checkMax();}}
@@ -1481,7 +1575,7 @@ function refreshPreview(){
 //  Eingabe
 // =====================================================================
 const keys={};
-function canShoot(){return game.playing&&!game.paused&&ball.state==='aim'&&OVS.every(o=>$(o).hidden);}
+function canShoot(){return game.playing&&!game.paused&&(ball.state==='aim'||ball.state==='cannon')&&OVS.every(o=>$(o).hidden);}
 function beginCharge(){if(!canShoot()||game.charging)return;sound.init();game.charging=true;game.chargeStart=performance.now();game.power=0;game.pdir=1;if(game.view==='over'){game.view='ball';game.overT=0;}updateHint();}
 function endCharge(){if(!game.charging)return;game.charging=false;updateHint();if(canShoot())shoot();}
 // Leertaste drücken: Kraftbalken startet. Nochmal drücken ODER nach dem Halten loslassen: Schlag.
@@ -1489,6 +1583,7 @@ function swingDown(){if(game.charging){endCharge();return;}beginCharge();}
 function swingUp(){if(game.charging&&performance.now()-game.chargeStart>300)endCharge();}
 function updateHint(){
   const t=isTouch?'SCHLAG':'Leertaste';
+  if(ball.state==='cannon'){$('powerHint').textContent=game.charging?`${t} drücken (oder loslassen) = Feuer!`:(isTouch?'Kanone: ziehen = zielen · SCHLAG = Kraft · nochmal = Feuer':'Kanone: A / D zielen · W / S Höhe · Leertaste = Kraft · nochmal = Feuer');return;}
   $('powerHint').textContent=game.charging?`${t} drücken (oder loslassen) = schlagen`:(isTouch?'Ziehen = Richtung · SCHLAG = Kraft aufladen · nochmal SCHLAG = schlagen':'A / D = Richtung · Leertaste = Kraft aufladen · nochmal Leertaste = schlagen');
 }
 addEventListener('keydown',e=>{
@@ -1529,6 +1624,9 @@ const sound={ctx:null,amb:[],
   clack(p,bouncy){if(bouncy)this.tone(380,.18,.25*p,'sine',760);else{this.tone(900,.04,.22*p,'square',500);this.noise(.04,2200,.2*p);}},
   thud(p){this.noise(.09,260,.5*p,'lowpass');},
   boost(){this.tone(300,.35,.18,'sawtooth',1200);},
+  boing(){this.tone(180,.35,.3,'sine',520);this.tone(90,.25,.2,'triangle',260,.02);},
+  clunk(){this.tone(160,.12,.35,'square',80);this.noise(.12,600,.3,'lowpass');},
+  boom(){this.noise(.9,180,1,'lowpass');this.noise(.25,1500,.4,'bandpass',.8);this.tone(90,.5,.5,'sine',40);},
   portal(){this.tone(200,.5,.2,'sine',1600);this.tone(1600,.4,.08,'triangle',400,.1);},
   splash(){this.noise(.6,800,.6,'lowpass');this.noise(.3,2400,.25,'bandpass',1);},
   sizzle(){this.noise(.9,4000,.35,'highpass');this.tone(140,.4,.2,'sawtooth',60);},
@@ -1560,12 +1658,16 @@ function loop(now){
   if(game.playing&&!game.paused){
     const rot=(keys.ShiftLeft||keys.ShiftRight)?.5:1.6;
     if(keys.ArrowLeft||keys.KeyA)game.yaw+=rot*dt;if(keys.ArrowRight||keys.KeyD)game.yaw-=rot*dt;
-    if(keys.ArrowUp||keys.KeyW)game.pitch=clamp(game.pitch-dt,.08,1.35);if(keys.ArrowDown||keys.KeyS)game.pitch=clamp(game.pitch+dt,.08,1.35);
+    if(ball.state==='cannon'&&game.cannon){const c=game.cannon;c.yaw=game.yaw;
+      if(keys.ArrowUp||keys.KeyW)c.pitch=clamp(c.pitch+dt*.7,.15,1.25);if(keys.ArrowDown||keys.KeyS)c.pitch=clamp(c.pitch-dt*.7,.15,1.25);}
+    else{if(keys.ArrowUp||keys.KeyW)game.pitch=clamp(game.pitch-dt,.08,1.35);if(keys.ArrowDown||keys.KeyS)game.pitch=clamp(game.pitch+dt,.08,1.35);}
     if(game.charging){game.power+=game.pdir*dt*.75;if(game.power>=1){game.power=1;game.pdir=-1;}if(game.power<=0){game.power=0;game.pdir=1;}}
     acc+=dt;let n=0;while(acc>=STEP&&n<14){physicsStep(STEP);acc-=STEP;n++;}if(n>=14)acc=0;
   }else if(game.view==='show'){game.simT+=dt;updateKinematics(game.simT);}
   for(const c of H.animated){if(c.mesh){c.mesh.position.copy(c.pos);c.mesh.quaternion.copy(c.quat);}if(c.vis)c.vis();}
-  for(const tr of H.triggers)tr.tex.offset.y-=dt*1.5;
+  for(const tr of H.triggers){if(tr.tex)tr.tex.offset.y-=dt*1.5;if(tr.mesh){tr.sq=Math.max(0,tr.sq-dt*3);tr.mesh.position.y=.03+Math.sin(tr.sq*Math.PI)*.12;tr.mesh.material.emissiveIntensity=.3+tr.sq*1.2;}}
+  for(const c of H.cannons){c.recoil=Math.max(0,c.recoil-dt*2.5);c.yawG.rotation.y=c.yaw;c.pitchG.rotation.x=-c.pitch;c.pitchG.position.z=-.18*c.recoil;}
+  updateCannonPreview();
   for(const pt of H.portals){pt.ga.rotation.y+=dt*2;pt.gb.rotation.y-=dt*2;}
   if(H.B.groundMesh&&H.theme.hazard!=='oob'){const m=H.B.groundMesh.material.map;m.offset.x+=dt*.01;m.offset.y+=dt*.006;}
   if(ball.state==='holed'){ball.sinkT=(ball.sinkT||0)+dt;ball.p.x=lerp(ball.p.x,H.cup.x,.2);ball.p.z=lerp(ball.p.z,H.cup.z,.2);ball.p.y=Math.max(H.cup.y-R*2.2,ball.p.y-dt*1.2);}
@@ -1574,8 +1676,12 @@ function loop(now){
   if(ball.state==='moving'&&hv>.01){_a.set(hvz,0,-hvx).normalize();ballMesh.rotateOnWorldAxis(_a,hv*dt/R);}
   const wantYaw=(ball.state==='moving'&&hv>.4)?Math.atan2(ball.v.x,ball.v.z):game.yaw;
   let dy=wantYaw-ball.hatYaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));ball.hatYaw+=dy*Math.min(1,dt*8);
-  hatMesh.position.set(ball.p.x,ball.p.y+R*.82,ball.p.z);hatMesh.rotation.y=ball.hatYaw;hatMesh.visible=ball.state!=='holed'||ball.sinkT<.15;
-  ballGroup.visible=!(ball.state==='holed'&&ball.sinkT>.6);
+  // Ball sinkt optisch in die Kuhle
+  const cdv=Math.hypot(ball.p.x-H.cup.x,ball.p.z-H.cup.z);
+  const dipOff=(ball.state!=='holed'&&cdv<DIP_R&&Math.abs(ball.p.y-R-H.cup.y)<.15)?-.06*Math.pow(1-cdv/DIP_R,1.6):0;
+  ballGroup.position.y+=dipOff;
+  hatMesh.position.set(ball.p.x,ball.p.y+R*.82+dipOff,ball.p.z);hatMesh.rotation.y=ball.hatYaw;hatMesh.visible=(ball.state!=='holed'||ball.sinkT<.15)&&ball.state!=='cannon';
+  ballGroup.visible=!(ball.state==='holed'&&ball.sinkT>.6)&&ball.state!=='cannon';
   if(hatMesh.userData.prop)hatMesh.userData.prop.rotation.y+=dt*(4+hv*8);if(hatMesh.userData.halo)hatMesh.userData.halo.position.y=.16+Math.sin(time*2)*.012;
   const showAim=game.playing&&ball.state==='aim'&&game.view!=='over';aimArrow.visible=showAim;
   if(showAim){aimArrow.position.set(ball.p.x,ball.p.y-R+.012,ball.p.z);aimArrow.rotation.y=game.yaw;const s=.55+game.power*2.2;aimArrow.userData.m.scale.set(1,s,1);aimArrow.userData.m.position.z=R+.05;
