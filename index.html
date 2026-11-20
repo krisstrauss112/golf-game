@@ -24,7 +24,7 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%;overflow:hidden;background:var(--ink);color:var(--text);font-family:var(--body);user-select:none;-webkit-user-select:none}
-  canvas#game{display:block;touch-action:none;position:fixed;inset:0;width:100%;height:100%}
+  canvas#game{outline:none;display:block;touch-action:none;position:fixed;inset:0;width:100%;height:100%}
   button{font-family:var(--display);cursor:pointer}
   button:focus-visible,input:focus-visible{outline:3px solid var(--flag);outline-offset:2px}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -153,7 +153,7 @@
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
+<canvas id="game" tabindex="0" aria-label="Spielfeld"></canvas>
 <div id="flash"></div>
 
 <div id="hudL" class="hud panel" hidden>
@@ -172,7 +172,7 @@
 <div id="powerBox" class="hud panel" hidden>
   <div id="powerHead"><span>Schlaghärte</span><b id="powerPct">0 %</b></div>
   <div id="powerTrack"><div id="powerFill"></div></div>
-  <div id="powerHint">Ziehen = Kamera drehen · Leertaste halten = aufladen · loslassen = schlagen</div>
+  <div id="powerHint">A / D = Richtung · Leertaste = Kraft aufladen · nochmal Leertaste = schlagen</div>
 </div>
 <div id="msg"></div>
 <div id="touch" hidden><button id="tView">Karte</button><button id="tSwing">SCHLAG</button></div>
@@ -257,7 +257,7 @@
       <button class="btn" id="pWard">Garderobe</button>
       <button class="btn" id="pQuit">Runde abbrechen <small>zurück zum Menü</small></button>
     </div>
-    <p class="note">Steuerung: Maus oder Finger ziehen dreht die Kamera, Mausrad zoomt, ← → drehen, Leertaste lädt den Schlag, C zeigt die Karte, Esc pausiert.</p>
+    <p class="note">Steuerung: A / D drehen die Schlagrichtung (Shift = fein), W / S neigen die Kamera, Leertaste startet den Kraftbalken und nochmal Leertaste schlägt. Mausrad zoomt, C zeigt die Karte, Esc pausiert.</p>
   </div>
 </div>
 
@@ -1122,6 +1122,7 @@ function loadHole(ci,hi,wxKey){
   Object.assign(lights.sun.shadow.camera,{left:-ext,right:ext,top:ext,bottom:-ext,near:1,far:140});lights.sun.shadow.camera.updateProjectionMatrix();
   lights.sun.position.set(ctr.x+18,ctr.y+40,ctr.z-14);lights.sun.target.position.copy(ctr);
 }
+function focusGame(){try{if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();canvas.focus({preventScroll:true});window.focus();}catch(e){}}
 function startCourse(ci){
   game.course=ci;game.scores=[];game.playing=true;game.result=null;
   const pool=THEMES[COURSES[ci].theme].weather;
@@ -1129,7 +1130,7 @@ function startCourse(ci){
   showOverlay(null);
   ['hudL','hudR','powerBox','btnPause'].forEach(id=>$(id).hidden=false);
   $('touch').hidden=!isTouch;
-  startHole(0);
+  startHole(0);focusGame();updateHint();
 }
 function startHole(hi){
   game.hole=hi;game.strokes=0;game.simT=0;
@@ -1144,7 +1145,7 @@ function startHole(hi){
 function placeBall(p){ball.p.set(p.x,p.y+R+.01,p.z);ball.v.set(0,0,0);ball.state='aim';ball.restT=0;ball.grounded=true;}
 function aimDir(){return new THREE.Vector3(Math.sin(game.yaw),0,Math.cos(game.yaw));}
 function shoot(){
-  const pw=Math.max(.04,game.power);ball.v.addScaledVector(aimDir(),VMAX*pw);
+  const pw=Math.max(.08,game.power);ball.v.addScaledVector(aimDir(),VMAX*pw);
   ball.state='moving';ball.moveT=0;ball.restT=0;game.strokes++;game.power=0;sound.hit(pw);updateHUD();
 }
 function penalty(kind){
@@ -1287,7 +1288,7 @@ function holeDone(){
   $('holeTitle').textContent=`Loch ${game.hole+1} · ${H.def.name}`;$('holeScore').textContent=fmtRel(game.scores[game.hole]-H.def.par);
   $('holeCard').replaceChildren(scoreTable(game.hole));showOverlay('ovHole');
 }
-$('holeNext').onclick=()=>{showOverlay(null);startHole(game.hole+1);};
+$('holeNext').onclick=()=>{showOverlay(null);startHole(game.hole+1);focusGame();};
 function finishCourse(){
   const c=COURSES[game.course],total=game.scores.reduce((a,b)=>a+b,0),par=c.holes.reduce((a,h)=>a+h.par,0);
   $('finTitle').textContent=`${c.name} geschafft!`;$('finScore').textContent=fmtRel(total-par);$('finCard').replaceChildren(scoreTable(-1));
@@ -1400,7 +1401,7 @@ $('mBoard').onclick=()=>{backTarget='ovMenu';openBoard();};
 $('btnPause').onclick=()=>pause(true);$('pResume').onclick=()=>pause(false);
 $('pWard').onclick=()=>{renderWardrobe();showOverlay('ovWard');backTarget='ovPause';};
 $('pQuit').onclick=()=>{game.result=null;quitToMenu();};
-function pause(on){if(!game.playing)return;game.paused=on;game.charging=false;showOverlay(on?'ovPause':null);backTarget='ovPause';}
+function pause(on){if(!game.playing)return;game.paused=on;game.charging=false;showOverlay(on?'ovPause':null);backTarget='ovPause';if(!on)focusGame();updateHint();}
 
 function renderCourses(){
   const list=$('courseList');list.replaceChildren();const loc=store.get('scores',{});
@@ -1481,17 +1482,24 @@ function refreshPreview(){
 // =====================================================================
 const keys={};
 function canShoot(){return game.playing&&!game.paused&&ball.state==='aim'&&OVS.every(o=>$(o).hidden);}
-function beginCharge(){if(!canShoot()||game.charging)return;sound.init();game.charging=true;game.power=0;game.pdir=1;if(game.view==='over'){game.view='ball';game.overT=0;}}
-function endCharge(){if(!game.charging)return;game.charging=false;if(canShoot())shoot();}
+function beginCharge(){if(!canShoot()||game.charging)return;sound.init();game.charging=true;game.chargeStart=performance.now();game.power=0;game.pdir=1;if(game.view==='over'){game.view='ball';game.overT=0;}updateHint();}
+function endCharge(){if(!game.charging)return;game.charging=false;updateHint();if(canShoot())shoot();}
+// Leertaste drücken: Kraftbalken startet. Nochmal drücken ODER nach dem Halten loslassen: Schlag.
+function swingDown(){if(game.charging){endCharge();return;}beginCharge();}
+function swingUp(){if(game.charging&&performance.now()-game.chargeStart>300)endCharge();}
+function updateHint(){
+  const t=isTouch?'SCHLAG':'Leertaste';
+  $('powerHint').textContent=game.charging?`${t} drücken (oder loslassen) = schlagen`:(isTouch?'Ziehen = Richtung · SCHLAG = Kraft aufladen · nochmal SCHLAG = schlagen':'A / D = Richtung · Leertaste = Kraft aufladen · nochmal Leertaste = schlagen');
+}
 addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT')return;
-  if(e.code==='Space'){e.preventDefault();if(!e.repeat){if(!$('ovHole').hidden){$('holeNext').click();return;}beginCharge();}return;}
+  if(e.code==='Space'){e.preventDefault();if(!e.repeat){if(!$('ovHole').hidden){$('holeNext').click();return;}swingDown();}return;}
   keys[e.code]=true;
   if(e.code==='Escape'){if(game.playing&&!game.paused&&$('ovHole').hidden&&$('ovFinish').hidden)pause(true);else if(game.paused&&!$('ovPause').hidden)pause(false);}
   if(e.code==='KeyC'&&game.playing){game.view=game.view==='over'?'ball':'over';game.overT=0;}
   if(e.code.startsWith('Arrow'))e.preventDefault();
 });
-addEventListener('keyup',e=>{keys[e.code]=false;if(e.code==='Space')endCharge();});
+addEventListener('keyup',e=>{keys[e.code]=false;if(e.code==='Space'){e.preventDefault();swingUp();}});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
 const pointers=new Map();let pinch0=0,dist0=5;
 canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===2){const [a,b]=[...pointers.values()];pinch0=Math.hypot(a.x-b.x,a.y-b.y);dist0=game.dist;}});
@@ -1502,8 +1510,8 @@ const endPtr=e=>{pointers.delete(e.pointerId);if(pointers.size<2)pinch0=0;};
 canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercancel',endPtr);
 canvas.addEventListener('wheel',e=>{e.preventDefault();game.dist=clamp(game.dist*(1+Math.sign(e.deltaY)*.1),1.8,14);},{passive:false});
 const isTouch='ontouchstart' in window||navigator.maxTouchPoints>0;
-if(isTouch)$('powerHint').textContent='Ziehen = Kamera drehen · SCHLAG halten = aufladen · loslassen = schlagen';
-const sw=$('tSwing');sw.addEventListener('pointerdown',e=>{e.preventDefault();sw.setPointerCapture(e.pointerId);beginCharge();});sw.addEventListener('pointerup',e=>{e.preventDefault();endCharge();});sw.addEventListener('pointercancel',()=>{game.charging=false;});
+updateHint();
+const sw=$('tSwing');sw.addEventListener('pointerdown',e=>{e.preventDefault();sw.setPointerCapture(e.pointerId);swingDown();});sw.addEventListener('pointerup',e=>{e.preventDefault();swingUp();});
 $('tView').onclick=()=>{if(game.playing){game.view=game.view==='over'?'ball':'over';game.overT=0;}};
 
 // =====================================================================

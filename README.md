@@ -22,9 +22,9 @@
 
 | Eingabe | Aktion |
 |---|---|
-| Maus oder Finger ziehen / `←` `→` | Kamera drehen und zielen |
-| Mausrad / Pinch / `↑` `↓` | Zoom und Neigung |
-| `Leertaste` halten / loslassen | Schlag aufladen / schlagen |
+| `A` `D` (oder `←` `→`, Maus ziehen) | Schlagrichtung drehen (`Shift` = fein) |
+| `W` `S` / Mausrad | Kamera neigen / zoomen |
+| `Leertaste` | Kraftbalken starten, nochmal `Leertaste` (oder nach dem Halten loslassen) = schlagen |
 | `C` | Übersichtskarte |
 | `Esc` | Pause |
 
