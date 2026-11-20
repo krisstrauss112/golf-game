@@ -1,30 +1,31 @@
-# ⛳ Fairway 3D
+# ⛳ Putt Paradies
 
-Ein 3D-Golfspiel für den Browser, gebaut mit [Three.js](https://threejs.org/), alles in einer einzigen `index.html`.
+3D-Minigolf für den Browser, gebaut mit [Three.js](https://threejs.org/). Das ganze Spiel steckt in einer einzigen `index.html`.
 
 ## Spielen
 
-`index.html` im Browser öffnen, fertig. Es braucht keinen Build-Schritt. Three.js wird von cdnjs geladen, du brauchst also eine Internetverbindung.
-
-Für GitHub Pages: in den Repo-Einstellungen *Pages → Deploy from branch* auswählen, dann ist das Spiel unter `https://<user>.github.io/golf-game/` erreichbar.
-
-## Steuerung
-
-| Taste | Aktion |
-|---|---|
-| `←` `→` / `A` `D` / Maus ziehen | Zielen (`Shift` = fein) |
-| `Q` `E` / `1`–`5` | Schläger wechseln |
-| `Leertaste` halten / loslassen | Kraftbalken pendelt / Schlag |
-| `C` | Übersicht ein/aus |
-| `R` | Ziel zurücksetzen |
-
-Auf Touch-Geräten gibt es eigene Buttons.
+`index.html` im Browser öffnen. Three.js und die Schriften kommen von einem CDN, du brauchst also Internet.
 
 ## Features
 
-- 9 Löcher (Par 35): Doglegs, ein Inselgrün, Wasserhindernisse, Bunker, Hügel und Bäume
-- Ballphysik mit Luftwiderstand, Backspin-Auftrieb, Wind, Abprallen und Rollen am Hang
-- Je nach Lage verhält sich der Ball anders: Fairway, Rough, Bunker, Grün
-- 5 Schläger (Driver, Holz 3, Eisen 5, Wedge, Putter), der passende wird automatisch vorgewählt
-- Flugbahn-Vorschau, Strafschläge bei Wasser und Aus, Scorekarte
-- Synthetische Soundeffekte über WebAudio
+- **3 Strecken mit je 6 Löchern:** Sonnenwiese (leicht), Piratenbucht (mittel) und Lavakrater (schwer)
+- **Hindernisse:** Windmühle, Rampen, Sprungschanzen, Schiebeplanken, Drehbalken, Pendel, Drehkreuz, eine Fähre und Beschleuniger
+- **Wetter:** Sonnig, Bewölkt, Regen (die Bahn ist nass, der Ball rollt kürzer), Schnee (glatt, der Ball rollt weiter), Nebel und Sturm mit Blitzen
+- **Wind** mit Richtung und Stärke, der den Ball ablenkt. Die Fahne weht mit.
+- **Schlaghärte:** Leertaste (oder SCHLAG-Button) halten, der Balken pendelt, loslassen schlägt
+- **Garderobe:** Ballfarbe (Palette oder frei wählbar), Muster und 11 Hüte
+- **Rangliste** pro Strecke. Als claude.ai-Artifact ist sie für alle gemeinsam, sonst wird sie lokal im Browser gespeichert.
+
+## Steuerung
+
+| Eingabe | Aktion |
+|---|---|
+| Maus oder Finger ziehen / `←` `→` | Kamera drehen und zielen |
+| Mausrad / Pinch / `↑` `↓` | Zoom und Neigung |
+| `Leertaste` halten / loslassen | Schlag aufladen / schlagen |
+| `C` | Übersichtskarte |
+| `Esc` | Pause |
+
+## Weitere Spiele im Repo
+
+- `fairway.html`: das ursprüngliche 3D-Golfspiel *Fairway 3D* mit 9 Löchern
